@@ -909,7 +909,7 @@ const StaffDashboard = () => {
         {/* Orders Tab */}
 
         {activeTab === 'orders' && (
-
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div className="space-y-8">
 
             <div className="flex flex-col sm:flex-row justify-start items-start sm:items-center gap-4">
@@ -962,11 +962,11 @@ const StaffDashboard = () => {
 
             ) : (
 
-              <div className="grid gap-6">
+              <div className="space-y-6 w-full">
 
                 {orders.map((order) => (
 
-                  <div key={order.id} className="glass-morphism-strong rounded-xl p-6">
+                  <div key={order.id} className="glass-morphism-strong rounded-xl p-6 w-full">
 
                     <div className="flex flex-col lg:flex-row justify-between items-start mb-4 gap-4">
 
