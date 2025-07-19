@@ -18,1668 +18,1675 @@ import Footer from '../../components/Common/Footer';
 
 const StaffDashboard = () => {
 
-  const { user } = useAuth();
+  const { user } = useAuth();
 
-  const [activeTab, setActiveTab] = useState('orders');
+  const [activeTab, setActiveTab] = useState('orders');
 
-  const [orders, setOrders] = useState([]);
+  const [orders, setOrders] = useState([]);
 
-  const [menuItems, setMenuItems] = useState([]);
+  const [menuItems, setMenuItems] = useState([]);
 
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(true);
 
-  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
 
-  const [editingItem, setEditingItem] = useState(null);
+  const [editingItem, setEditingItem] = useState(null);
 
-  const [updatingOrders, setUpdatingOrders] = useState(new Set());
+  const [updatingOrders, setUpdatingOrders] = useState(new Set());
 
-  const [savingMenuItem, setSavingMenuItem] = useState(false);
+  const [savingMenuItem, setSavingMenuItem] = useState(false);
 
-  const [deletingMenuItem, setDeletingMenuItem] = useState(null);
+  const [deletingMenuItem, setDeletingMenuItem] = useState(null);
 
-  const [toasts, setToasts] = useState([]);
+  const [toasts, setToasts] = useState([]);
 
 
 
-  // Real-time subscriptions for menu items and orders
+  // Real-time subscriptions for menu items and orders
 
-  useRealtimeSubscription({
+  useRealtimeSubscription({
 
-    table: 'menu_items',
+    table: 'menu_items',
 
-    filter: `canteen_name=eq.${user?.full_name}`,
+    filter: `canteen_name=eq.${user?.full_name}`,
 
-    onUpdate: (payload) => {
+    onUpdate: (payload) => {
 
-      console.log('Staff menu item updated:', payload);
+      console.log('Staff menu item updated:', payload);
 
-      // Update the specific menu item in state
+      // Update the specific menu item in state
 
-      setMenuItems(prev => prev.map(item => 
+      setMenuItems(prev => prev.map(item => 
 
-        item.id === payload.new.id ? { ...item, ...payload.new } : item
+        item.id === payload.new.id ? { ...item, ...payload.new } : item
 
-      ));
+      ));
 
-    }
+    }
 
-  });
+  });
 
 
 
-  useRealtimeSubscription({
+  useRealtimeSubscription({
 
-    table: 'orders',
+    table: 'orders',
 
-    onUpdate: (payload) => {
+    onUpdate: (payload) => {
 
-      console.log('Order updated:', payload);
+      console.log('Order updated:', payload);
 
-      fetchOrders(); // Refresh orders when status changes
+      fetchOrders(); // Refresh orders when status changes
 
-    },
+    },
 
-    onInsert: (payload) => {
+    onInsert: (payload) => {
 
-      console.log('New order received:', payload);
+      console.log('New order received:', payload);
 
-      fetchOrders(); // Refresh orders when new order is placed
+      fetchOrders(); // Refresh orders when new order is placed
 
-      showToast('New order received!', 'success');
+      showToast('New order received!', 'success');
 
-    }
+    }
 
-  });
+  });
 
 
 
-  useRealtimeSubscription({
+  useRealtimeSubscription({
 
-    table: 'cart_items',
+    table: 'cart_items',
 
-    onUpdate: () => {
+    onUpdate: () => {
 
-      console.log('Cart updated, refreshing menu quantities');
+      console.log('Cart updated, refreshing menu quantities');
 
-      fetchMenuItems(); // Refresh menu items when cart changes affect quantities
+      fetchMenuItems(); // Refresh menu items when cart changes affect quantities
 
-    },
+    },
 
-    onInsert: () => {
+    onInsert: () => {
 
-      console.log('Item added to cart, refreshing menu quantities');
+      console.log('Item added to cart, refreshing menu quantities');
 
-      fetchMenuItems(); // Refresh menu items when cart changes affect quantities
+      fetchMenuItems(); // Refresh menu items when cart changes affect quantities
 
-    },
+    },
 
-    onDelete: () => {
+    onDelete: () => {
 
-      console.log('Item removed from cart, refreshing menu quantities');
+      console.log('Item removed from cart, refreshing menu quantities');
 
-      fetchMenuItems(); // Refresh menu items when cart changes affect quantities
+      fetchMenuItems(); // Refresh menu items when cart changes affect quantities
 
-    }
+    }
 
-  });
+  });
 
 
 
-  const [editForm, setEditForm] = useState({
+  const [editForm, setEditForm] = useState({
 
-    name: '',
+    name: '',
 
-    description: '',
+    description: '',
 
-    price: '',
+    price: '',
 
-    image_url: '',
+    image_url: '',
 
-    category: '',
+    category: '',
 
-    serves: '',
+    serves: '',
 
-    canteen_name: '',
+    canteen_name: '',
 
-    quantity_available: ''
+    quantity_available: ''
 
-  });
+  });
 
 
 
-  const showToast = (message, type) => {
+  const showToast = (message, type) => {
 
-    const id = Date.now().toString();
+    const id = Date.now().toString();
 
-    setToasts(prev => [...prev, { id, message, type }]);
+    setToasts(prev => [...prev, { id, message, type }]);
 
-  };
+  };
 
 
 
-  const removeToast = (id) => {
+  const removeToast = (id) => {
 
-    setToasts(prev => prev.filter(toast => toast.id !== id));
+    setToasts(prev => prev.filter(toast => toast.id !== id));
 
-  };
+  };
 
 
 
-  useEffect(() => {
+  useEffect(() => {
 
-    fetchOrders();
+    fetchOrders();
 
-    fetchMenuItems();
+    fetchMenuItems();
 
-  }, []);
+  }, []);
 
 
 
-  useEffect(() => {
+  useEffect(() => {
 
-    if (editingItem) {
+    if (editingItem) {
 
-      setEditForm({
+      setEditForm({
 
-        name: editingItem.name,
+        name: editingItem.name,
 
-        description: editingItem.description,
+        description: editingItem.description,
 
-        price: editingItem.price.toString(),
+        price: editingItem.price.toString(),
 
-        image_url: editingItem.image_url,
+        image_url: editingItem.image_url,
 
-        category: editingItem.category,
+        category: editingItem.category,
 
-        serves: editingItem.serves.toString(),
+        serves: editingItem.serves.toString(),
 
-        canteen_name: editingItem.canteen_name,
+        canteen_name: editingItem.canteen_name,
 
-        quantity_available: editingItem.quantity_available.toString()
+        quantity_available: editingItem.quantity_available.toString()
 
-      });
+      });
 
-    } else {
+    } else {
 
-      setEditForm({
+      setEditForm({
 
-        name: '',
+        name: '',
 
-        description: '',
+        description: '',
 
-        price: '',
+        price: '',
 
-        image_url: '',
+        image_url: '',
 
-        category: 'main_course',
+        category: 'main_course',
 
-        serves: '1',
+        serves: '1',
 
-        canteen_name: user?.full_name || '',
+        canteen_name: user?.full_name || '',
 
-        quantity_available: '0'
+        quantity_available: '0'
 
-      });
+      });
 
-    }
+    }
 
-  }, [editingItem, user]);
+  }, [editingItem, user]);
 
 
 
-  const fetchOrders = async () => {
+  const fetchOrders = async () => {
 
-    try {
+    try {
 
-      if (!user?.full_name) {
+      if (!user?.full_name) {
 
-        console.error('Staff user full_name not available');
+        console.error('Staff user full_name not available');
 
-        setLoading(false);
+        setLoading(false);
 
-        return;
+        return;
 
-      }
+      }
 
 
 
-      const { data: allOrders, error: ordersError } = await supabase
+      const { data: allOrders, error: ordersError } = await supabase
 
-        .from('orders')
+        .from('orders')
 
-        .select('*')
+        .select('*')
 
-        .order('created_at', { ascending: false });
+        .order('created_at', { ascending: false });
 
 
 
-      if (ordersError) throw ordersError;
+      if (ordersError) throw ordersError;
 
 
 
-      if (!allOrders || allOrders.length === 0) {
+      if (!allOrders || allOrders.length === 0) {
 
-        setOrders([]);
+        setOrders([]);
 
-        setLoading(false);
+        setLoading(false);
 
-        return;
+        return;
 
-      }
+      }
 
 
 
-      const userIds = [...new Set(allOrders.map(order => order.user_id))];
+      const userIds = [...new Set(allOrders.map(order => order.user_id))];
 
-      const { data: users, error: usersError } = await supabase
+      const { data: users, error: usersError } = await supabase
 
-        .from('users')
+        .from('users')
 
-        .select('*')
+        .select('*')
 
-        .in('id', userIds);
+        .in('id', userIds);
 
 
 
-      if (usersError) throw usersError;
+      if (usersError) throw usersError;
 
 
 
-      const orderIds = allOrders.map(order => order.id);
+      const orderIds = allOrders.map(order => order.id);
 
-      const { data: orderItems, error: orderItemsError } = await supabase
+      const { data: orderItems, error: orderItemsError } = await supabase
 
-        .from('order_items')
+        .from('order_items')
 
-        .select(`
+        .select(`
 
-          *,
+          *,
 
-          menu_item:menu_items(*)
+          menu_item:menu_items(*)
 
-        `)
+        `)
 
-        .in('order_id', orderIds);
+        .in('order_id', orderIds);
 
 
 
-      if (orderItemsError) throw orderItemsError;
+      if (orderItemsError) throw orderItemsError;
 
 
 
-      const userMap = new Map();
+      const userMap = new Map();
 
-      users?.forEach(user => {
+      users?.forEach(user => {
 
-        userMap.set(user.id, user);
+        userMap.set(user.id, user);
 
-      });
+      });
 
 
 
-      const relevantOrders = allOrders.filter(order => {
+      const relevantOrders = allOrders.filter(order => {
 
-        const orderItemsForOrder = orderItems?.filter(item => item.order_id === order.id) || [];
+        const orderItemsForOrder = orderItems?.filter(item => item.order_id === order.id) || [];
 
-        return orderItemsForOrder.some(item => 
+        return orderItemsForOrder.some(item => 
 
-          item.menu_item?.canteen_name === user.full_name
+          item.menu_item?.canteen_name === user.full_name
 
-        );
+        );
 
-      });
+      });
 
 
 
-      const finalOrders = relevantOrders.map(order => {
+      const finalOrders = relevantOrders.map(order => {
 
-        const userData = userMap.get(order.user_id);
+        const userData = userMap.get(order.user_id);
 
-        const canteenOrderItems = orderItems?.filter(item => 
+        const canteenOrderItems = orderItems?.filter(item => 
 
-          item.order_id === order.id && 
+          item.order_id === order.id && 
 
-          item.menu_item?.canteen_name === user.full_name
+          item.menu_item?.canteen_name === user.full_name
 
-        ) || [];
+        ) || [];
 
 
 
-        const canteenTotal = canteenOrderItems.reduce((sum, item) => 
+        const canteenTotal = canteenOrderItems.reduce((sum, item) => 
 
-          sum + (item.price * item.quantity), 0
+          sum + (item.price * item.quantity), 0
 
-        );
+        );
 
 
 
-        return {
+        return {
 
-          ...order,
+          ...order,
 
-          user: userData || null,
+          user: userData || null,
 
-          order_items: canteenOrderItems,
+          order_items: canteenOrderItems,
 
-          total_amount: canteenTotal
+          total_amount: canteenTotal
 
-        };
+        };
 
-      });
+      });
 
 
 
-      setOrders(finalOrders);
+      setOrders(finalOrders);
 
 
 
-    } catch (error) {
+    } catch (error) {
 
-      console.error('Error in fetchOrders:', error);
+      console.error('Error in fetchOrders:', error);
 
-      showToast('Failed to fetch orders. Please try again.', 'error');
+      showToast('Failed to fetch orders. Please try again.', 'error');
 
-    } finally {
+    } finally {
 
-      setLoading(false);
+      setLoading(false);
 
-    }
+    }
 
-  };
+  };
 
 
 
-  const fetchMenuItems = async () => {
+  const fetchMenuItems = async () => {
 
-    try {
+    try {
 
-      if (!user?.full_name) return;
+      if (!user?.full_name) return;
 
 
 
-      const { data, error } = await supabase
+      const { data, error } = await supabase
 
-        .from('menu_items')
+        .from('menu_items')
 
-        .select('*')
+        .select('*')
 
-        .eq('canteen_name', user.full_name)
+        .eq('canteen_name', user.full_name)
 
-        .order('name');
+        .order('name');
 
 
 
-      if (error) throw error;
+      if (error) throw error;
 
-      setMenuItems(data || []);
+      setMenuItems(data || []);
 
-    } catch (error) {
+    } catch (error) {
 
-      console.error('Error fetching menu items:', error);
+      console.error('Error fetching menu items:', error);
 
-    }
+    }
 
-  };
+  };
 
 
 
-  const updateOrderStatus = async (orderId, status) => {
+  const updateOrderStatus = async (orderId, status) => {
 
-    const updateKey = `${orderId}-${status}`;
+    const updateKey = `${orderId}-${status}`;
 
-    
+    
 
-    if (updatingOrders.has(updateKey)) return;
+    if (updatingOrders.has(updateKey)) return;
 
 
 
-    setUpdatingOrders(prev => new Set(prev).add(updateKey));
+    setUpdatingOrders(prev => new Set(prev).add(updateKey));
 
-    
+    
 
-    try {
+    try {
 
-      const { error } = await supabase
+      const { error } = await supabase
 
-        .from('orders')
+        .from('orders')
 
-        .update({ status })
+        .update({ status })
 
-        .eq('id', orderId);
+        .eq('id', orderId);
 
 
 
-      if (error) throw error;
+      if (error) throw error;
 
-      
+      
 
-      if (status === 'ready') {
+      if (status === 'ready') {
 
-        showToast('Order marked as ready! The cosmic kitchen has completed its work!', 'success');
+        showToast('Order marked as ready! The cosmic kitchen has completed its work!', 'success');
 
-      } else {
+      } else {
 
-        showToast(`Order status updated to ${status}`, 'success');
+        showToast(`Order status updated to ${status}`, 'success');
 
-      }
+      }
 
-      
+      
 
-      await fetchOrders();
+      await fetchOrders();
 
-    } catch (error) {
+    } catch (error) {
 
-      console.error('Error updating order status:', error);
+      console.error('Error updating order status:', error);
 
-      showToast('Failed to update order status. Please try again.', 'error');
+      showToast('Failed to update order status. Please try again.', 'error');
 
-    } finally {
+    } finally {
 
-      setUpdatingOrders(prev => {
+      setUpdatingOrders(prev => {
 
-        const newSet = new Set(prev);
+        const newSet = new Set(prev);
 
-        newSet.delete(updateKey);
+        newSet.delete(updateKey);
 
-        return newSet;
+        return newSet;
 
-      });
+      });
 
-    }
+    }
 
-  };
+  };
 
 
 
-  const handleSaveMenuItem = async () => {
+  const handleSaveMenuItem = async () => {
 
-    if (savingMenuItem) return;
+    if (savingMenuItem) return;
 
 
 
-    if (!editForm.name.trim()) {
+    if (!editForm.name.trim()) {
 
-      showToast('Please enter an item name', 'error');
+      showToast('Please enter an item name', 'error');
 
-      return;
+      return;
 
-    }
+    }
 
 
 
-    if (!editForm.description.trim()) {
+    if (!editForm.description.trim()) {
 
-      showToast('Please enter a description', 'error');
+      showToast('Please enter a description', 'error');
 
-      return;
+      return;
 
-    }
+    }
 
 
 
-    const price = parseFloat(editForm.price);
+    const price = parseFloat(editForm.price);
 
-    if (isNaN(price) || price <= 0) {
+    if (isNaN(price) || price <= 0) {
 
-      showToast('Please enter a valid price', 'error');
+      showToast('Please enter a valid price', 'error');
 
-      return;
+      return;
 
-    }
+    }
 
 
 
-    const serves = parseInt(editForm.serves);
+    const serves = parseInt(editForm.serves);
 
-    if (isNaN(serves) || serves <= 0) {
+    if (isNaN(serves) || serves <= 0) {
 
-      showToast('Please enter a valid serves count', 'error');
+      showToast('Please enter a valid serves count', 'error');
 
-      return;
+      return;
 
-    }
+    }
 
 
 
-    const quantityAvailable = parseInt(editForm.quantity_available);
+    const quantityAvailable = parseInt(editForm.quantity_available);
 
-    if (isNaN(quantityAvailable) || quantityAvailable < 0) {
+    if (isNaN(quantityAvailable) || quantityAvailable < 0) {
 
-      showToast('Please enter a valid quantity', 'error');
+      showToast('Please enter a valid quantity', 'error');
 
-      return;
+      return;
 
-    }
+    }
 
 
 
-    setSavingMenuItem(true);
+    setSavingMenuItem(true);
 
 
 
-    try {
+    try {
 
-      const defaultImageUrl = 'https://images.pexels.com/photos/1640777/pexels-photo-1640777.jpeg';
+      const defaultImageUrl = 'https://images.pexels.com/photos/1640777/pexels-photo-1640777.jpeg';
 
-      const imageUrl = editForm.image_url.trim() || defaultImageUrl;
+      const imageUrl = editForm.image_url.trim() || defaultImageUrl;
 
 
 
-      const menuItemData = {
+      const menuItemData = {
 
-        name: editForm.name.trim(),
+        name: editForm.name.trim(),
 
-        description: editForm.description.trim(),
+        description: editForm.description.trim(),
 
-        price: price,
+        price: price,
 
-        image_url: imageUrl,
+        image_url: imageUrl,
 
-        category: editForm.category || 'main_course',
+        category: editForm.category || 'main_course',
 
-        serves: serves,
+        serves: serves,
 
-        canteen_name: user?.full_name || '',
+        canteen_name: user?.full_name || '',
 
-        quantity_available: quantityAvailable
+        quantity_available: quantityAvailable
 
-      };
+      };
 
 
 
-      let result;
+      let result;
 
-      if (editingItem) {
+      if (editingItem) {
 
-        result = await supabase
+        result = await supabase
 
-          .from('menu_items')
+          .from('menu_items')
 
-          .update(menuItemData)
+          .update(menuItemData)
 
-          .eq('id', editingItem.id)
+          .eq('id', editingItem.id)
 
-          .select();
+          .select();
 
-      } else {
+      } else {
 
-        result = await supabase
+        result = await supabase
 
-          .from('menu_items')
+          .from('menu_items')
 
-          .insert([menuItemData])
+          .insert([menuItemData])
 
-          .select();
+          .select();
 
-      }
+      }
 
 
 
-      if (result.error) {
+      if (result.error) {
 
-        throw new Error(result.error.message);
+        throw new Error(result.error.message);
 
-      }
+      }
 
 
 
-      showToast(
+      showToast(
 
-        editingItem ? 'Menu item updated successfully!' : 'Menu item created successfully!', 
+        editingItem ? 'Menu item updated successfully!' : 'Menu item created successfully!', 
 
-        'success'
+        'success'
 
-      );
+      );
 
 
 
-      await fetchMenuItems();
+      await fetchMenuItems();
 
-      setIsEditModalOpen(false);
+      setIsEditModalOpen(false);
 
-      setEditingItem(null);
+      setEditingItem(null);
 
-    } catch (error) {
+    } catch (error) {
 
-      console.error('Error saving menu item:', error);
+      console.error('Error saving menu item:', error);
 
-      showToast('Failed to save menu item. Please try again.', 'error');
+      showToast('Failed to save menu item. Please try again.', 'error');
 
-    } finally {
+    } finally {
 
-      setSavingMenuItem(false);
+      setSavingMenuItem(false);
 
-    }
+    }
 
-  };
+  };
 
 
 
-  const handleDeleteMenuItem = async (itemId) => {
+  const handleDeleteMenuItem = async (itemId) => {
 
-    if (deletingMenuItem === itemId) return;
+    if (deletingMenuItem === itemId) return;
 
 
 
-    if (!confirm('Are you sure you want to delete this menu item? This action cannot be undone.')) return;
+    if (!confirm('Are you sure you want to delete this menu item? This action cannot be undone.')) return;
 
-    
+    
 
-    setDeletingMenuItem(itemId);
+    setDeletingMenuItem(itemId);
 
 
 
-    try {
+    try {
 
-      const { error } = await supabase
+      const { error } = await supabase
 
-        .from('menu_items')
+        .from('menu_items')
 
-        .delete()
+        .delete()
 
-        .eq('id', itemId);
+        .eq('id', itemId);
 
 
 
-      if (error) throw error;
+      if (error) throw error;
 
-      
+      
 
-      showToast('Menu item deleted successfully!', 'success');
+      showToast('Menu item deleted successfully!', 'success');
 
-      await fetchMenuItems();
+      await fetchMenuItems();
 
-    } catch (error) {
+    } catch (error) {
 
-      console.error('Error deleting menu item:', error);
+      console.error('Error deleting menu item:', error);
 
-      showToast('Failed to delete menu item. Please try again.', 'error');
+      showToast('Failed to delete menu item. Please try again.', 'error');
 
-    } finally {
+    } finally {
 
-      setDeletingMenuItem(null);
+      setDeletingMenuItem(null);
 
-    }
+    }
 
-  };
+  };
 
 
 
-  const getStatusColor = (status) => {
+  const getStatusColor = (status) => {
 
-    switch (status) {
+    switch (status) {
 
-      case 'pending': return 'status-pending';
+      case 'pending': return 'status-pending';
 
-      case 'processing': return 'status-processing';
+      case 'processing': return 'status-processing';
 
-      case 'ready': return 'status-ready';
+      case 'ready': return 'status-ready';
 
-      case 'completed': return 'status-completed';
+      case 'completed': return 'status-completed';
 
-      case 'cancelled': return 'status-cancelled';
+      case 'cancelled': return 'status-cancelled';
 
-      default: return 'status-pending';
+      default: return 'status-pending';
 
-    }
+    }
 
-  };
+  };
 
 
 
-  const getStatusIcon = (status) => {
+  const getStatusIcon = (status) => {
 
-    switch (status) {
+    switch (status) {
 
-      case 'pending': return <Clock className="w-4 h-4" />;
+      case 'pending': return <Clock className="w-4 h-4" />;
 
-      case 'processing': return <Package className="w-4 h-4" />;
+      case 'processing': return <Package className="w-4 h-4" />;
 
-      case 'ready': return <CheckCircle className="w-4 h-4" />;
+      case 'ready': return <CheckCircle className="w-4 h-4" />;
 
-      case 'completed': return <CheckCircle className="w-4 h-4" />;
+      case 'completed': return <CheckCircle className="w-4 h-4" />;
 
-      case 'cancelled': return <AlertCircle className="w-4 h-4" />;
+      case 'cancelled': return <AlertCircle className="w-4 h-4" />;
 
-      default: return <Clock className="w-4 h-4" />;
+      default: return <Clock className="w-4 h-4" />;
 
-    }
+    }
 
-  };
+  };
 
 
 
-  const isOrderUpdating = (orderId, status) => {
+  const isOrderUpdating = (orderId, status) => {
 
-    const updateKey = `${orderId}-${status}`;
+    const updateKey = `${orderId}-${status}`;
 
-    return updatingOrders.has(updateKey);
+    return updatingOrders.has(updateKey);
 
-  };
+  };
 
 
 
-  const formatStudentInfo = (orderUser) => {
+  const formatStudentInfo = (orderUser) => {
 
-    if (!orderUser) {
+    if (!orderUser) {
 
-      return 'Unknown Student (No User Data)';
+      return 'Unknown Student (No User Data)';
 
-    }
+    }
 
-    
+    
 
-    const name = orderUser.full_name || 'Unknown Name';
+    const name = orderUser.full_name || 'Unknown Name';
 
-    const regNumber = orderUser.registration_number;
+    const regNumber = orderUser.registration_number;
 
-    
+    
 
-    if (regNumber) {
+    if (regNumber) {
 
-      return `${name} (${regNumber})`;
+      return `${name} (${regNumber})`;
 
-    }
+    }
 
-    
+    
 
-    return `${name} (No Reg. Number)`;
+    return `${name} (No Reg. Number)`;
 
-  };
+  };
 
 
 
-  if (loading) {
+  if (loading) {
 
-    return (
+    return (
 
-      <div className="min-h-screen modern-gradient flex items-center justify-center">
+      <div className="min-h-screen modern-gradient flex items-center justify-center">
 
-        <div className="text-center">
+        <div className="text-center">
 
-          <div className="w-16 h-16 modern-spinner rounded-full animate-spin mx-auto mb-6"></div>
+          <div className="w-16 h-16 modern-spinner rounded-full animate-spin mx-auto mb-6"></div>
 
-          <div className="flex items-center justify-center space-x-3">
+          <div className="flex items-center justify-center space-x-3">
 
-            <Crown className="w-6 h-6 text-emerald-500" />
+            <Crown className="w-6 h-6 text-emerald-500" />
 
-            <span className="text-xl font-medium text-gray-200">Loading Command Center...</span>
+            <span className="text-xl font-medium text-gray-200">Loading Command Center...</span>
 
-          </div>
+          </div>
 
-          <p className="text-gray-400 text-sm mt-2">Preparing your dashboard</p>
+          <p className="text-gray-400 text-sm mt-2">Preparing your dashboard</p>
 
-        </div>
+        </div>
 
-      </div>
+      </div>
 
-    );
+    );
 
-  }
+  }
 
 
 
-  return (
+  return (
 
-    <div className="min-h-screen modern-gradient transition-colors duration-200 flex flex-col">
+    <div className="min-h-screen modern-gradient transition-colors duration-200 flex flex-col">
 
-      <Header title={`${user?.full_name || 'Staff'} Command Center`} />
+      <Header title={`${user?.full_name || 'Staff'} Command Center`} />
 
 
 
-      {/* Toast Notifications */}
+      {/* Toast Notifications */}
 
-      {toasts.map((toast) => (
+      {toasts.map((toast) => (
 
-        <Toast
+        <Toast
 
-          key={toast.id}
+          key={toast.id}
 
-          message={toast.message}
+          message={toast.message}
 
-          type={toast.type}
+          type={toast.type}
 
-          onClose={() => removeToast(toast.id)}
+          onClose={() => removeToast(toast.id)}
 
-        />
+        />
 
-      ))}
+      ))}
 
 
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 flex-1">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 flex-1">
 
-        {/* Tabs */}
+        {/* Left-aligned content container */}
 
-        <div className="mb-8">
+        <div className="text-left">
 
-          <nav className="flex space-x-8">
+        {/* Tabs */}
 
-            <button
+        <div className="mb-8">
 
-              onClick={() => setActiveTab('orders')}
+          <nav className="flex space-x-8">
 
-              className={`py-2 px-1 border-b-2 font-medium text-sm transition-colors duration-200 ${
+            <button
 
-                activeTab === 'orders'
+              onClick={() => setActiveTab('orders')}
 
-                  ? 'border-emerald-500 text-emerald-400'
+              className={`py-2 px-1 border-b-2 font-medium text-sm transition-colors duration-200 ${
 
-                  : 'border-transparent text-gray-600 dark:text-gray-500 hover:text-gray-800 dark:hover:text-gray-300 hover:border-gray-400'
+                activeTab === 'orders'
 
-              }`}
+                  ? 'border-emerald-500 text-emerald-400'
 
-            >
+                  : 'border-transparent text-gray-600 dark:text-gray-500 hover:text-gray-800 dark:hover:text-gray-300 hover:border-gray-400'
 
-              Orders Management
+              }`}
 
-            </button>
+            >
 
-            <button
+              Orders Management
 
-              onClick={() => setActiveTab('menu')}
+            </button>
 
-              className={`py-2 px-1 border-b-2 font-medium text-sm transition-colors duration-200 ${
+            <button
 
-                activeTab === 'menu'
+              onClick={() => setActiveTab('menu')}
 
-                  ? 'border-emerald-500 text-emerald-400'
+              className={`py-2 px-1 border-b-2 font-medium text-sm transition-colors duration-200 ${
 
-                  : 'border-transparent text-gray-600 dark:text-gray-500 hover:text-gray-800 dark:hover:text-gray-300 hover:border-gray-400'
+                activeTab === 'menu'
 
-              }`}
+                  ? 'border-emerald-500 text-emerald-400'
 
-            >
+                  : 'border-transparent text-gray-600 dark:text-gray-500 hover:text-gray-800 dark:hover:text-gray-300 hover:border-gray-400'
 
-              Menu Management
+              }`}
 
-            </button>
+            >
 
-          </nav>
+              Menu Management
 
-        </div>
+            </button>
 
+          </nav>
 
+        </div>
 
-        {/* Orders Tab */}
 
-        {activeTab === 'orders' && (
 
-          <div className="space-y-8">
+        {/* Orders Tab */}
 
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        {activeTab === 'orders' && (
 
-              <h2 className="text-2xl font-bold text-gray-800 dark:text-white">Orders for {user?.full_name}</h2>
+          <div className="space-y-8">
 
-              <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-4">
+            <div className="flex flex-col sm:flex-row justify-start items-start sm:items-center gap-4">
 
-                <div className="glass-morphism px-4 py-2 rounded-lg border border-white/20">
+              <h2 className="text-2xl font-bold text-gray-800 dark:text-white">Orders for {user?.full_name}</h2>
 
-                  <span className="text-sm text-gray-600 dark:text-gray-400">Total Orders: </span>
+              <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-4">
 
-                  <span className="font-semibold text-gray-800 dark:text-white">{orders.length}</span>
+                <div className="glass-morphism px-4 py-2 rounded-lg border border-white/20">
 
-                </div>
+                  <span className="text-sm text-gray-600 dark:text-gray-400">Total Orders: </span>
 
-                <div className="glass-morphism px-4 py-2 rounded-lg border border-white/20">
+                  <span className="font-semibold text-gray-800 dark:text-white">{orders.length}</span>
 
-                  <span className="text-sm text-gray-600 dark:text-gray-400">Pending: </span>
+                </div>
 
-                  <span className="font-semibold text-amber-400">
+                <div className="glass-morphism px-4 py-2 rounded-lg border border-white/20">
 
-                    {orders.filter(o => o.status === 'pending').length}
+                  <span className="text-sm text-gray-600 dark:text-gray-400">Pending: </span>
 
-                  </span>
+                  <span className="font-semibold text-amber-400">
 
-                </div>
+                    {orders.filter(o => o.status === 'pending').length}
 
-              </div>
+                  </span>
 
-            </div>
+                </div>
 
+              </div>
 
+            </div>
 
-            {orders.length === 0 ? (
 
-              <div className="text-center py-12">
 
-                <div className="w-16 h-16 glass-morphism rounded-full flex items-center justify-center mx-auto mb-4 border border-white/20">
+            {orders.length === 0 ? (
 
-                  <Clock className="w-8 h-8 text-gray-500 dark:text-gray-400" />
+              <div className="text-center py-12">
 
-                </div>
+                <div className="w-16 h-16 glass-morphism rounded-full flex items-center justify-center mx-auto mb-4 border border-white/20">
 
-                <h3 className="text-lg font-medium text-gray-800 dark:text-white mb-2">No orders yet</h3>
+                  <Clock className="w-8 h-8 text-gray-500 dark:text-gray-400" />
 
-                <p className="text-gray-600 dark:text-gray-400">Orders for {user?.full_name} will appear here when students place them</p>
+                </div>
 
-              </div>
+                <h3 className="text-lg font-medium text-gray-800 dark:text-white mb-2">No orders yet</h3>
 
-            ) : (
+                <p className="text-gray-600 dark:text-gray-400">Orders for {user?.full_name} will appear here when students place them</p>
 
-              <div className="grid gap-6">
+              </div>
 
-                {orders.map((order) => (
+            ) : (
 
-                  <div key={order.id} className="glass-morphism-strong rounded-xl p-6">
+              <div className="grid gap-6">
 
-                    <div className="flex flex-col lg:flex-row justify-between items-start mb-4 gap-4">
+                {orders.map((order) => (
 
-                      <div>
+                  <div key={order.id} className="glass-morphism-strong rounded-xl p-6">
 
-                        <h4 className="text-lg font-semibold text-gray-800 dark:text-white">
+                    <div className="flex flex-col lg:flex-row justify-between items-start mb-4 gap-4">
 
-                          Order #{order.id.slice(0, 8)}
+                      <div>
 
-                        </h4>
+                        <h4 className="text-lg font-semibold text-gray-800 dark:text-white">
 
-                        <p className="text-sm text-gray-600 dark:text-gray-400 font-medium">
+                          Order #{order.id.slice(0, 8)}
 
-                          {formatStudentInfo(order.user)}
+                        </h4>
 
-                        </p>
+                        <p className="text-sm text-gray-600 dark:text-gray-400 font-medium">
 
-                        <p className="text-sm text-gray-600 dark:text-gray-500">
+                          {formatStudentInfo(order.user)}
 
-                          {new Date(order.created_at).toLocaleDateString()} at{' '}
+                        </p>
 
-                          {new Date(order.created_at).toLocaleTimeString()}
+                        <p className="text-sm text-gray-600 dark:text-gray-500">
 
-                        </p>
+                          {new Date(order.created_at).toLocaleDateString()} at{' '}
 
-                        {/* Mobile Price - Left aligned */}
+                          {new Date(order.created_at).toLocaleTimeString()}
 
-                        <p className="text-xl font-bold gradient-text md:hidden mt-2">₹{order.total_amount}</p>
+                        </p>
 
-                      </div>
+                        {/* Mobile Price - Left aligned */}
 
-                      <div className="hidden md:block text-right">
+                        <p className="text-xl font-bold gradient-text md:hidden mt-2">₹{order.total_amount}</p>
 
-                        <p className="text-xl font-bold gradient-text">₹{order.total_amount}</p>
+                      </div>
 
-                        <div className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(order.status)}`}>
+                      <div className="hidden md:block text-right">
 
-                          {getStatusIcon(order.status)}
+                        <p className="text-xl font-bold gradient-text">₹{order.total_amount}</p>
 
-                          <span className="ml-1 capitalize">{order.status}</span>
+                        <div className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(order.status)}`}>
 
-                        </div>
+                          {getStatusIcon(order.status)}
 
-                      </div>
+                          <span className="ml-1 capitalize">{order.status}</span>
 
-                      {/* Mobile Status - Left aligned */}
+                        </div>
 
-                      <div className={`md:hidden inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(order.status)} mt-2`}>
+                      </div>
 
-                        {getStatusIcon(order.status)}
+                      {/* Mobile Status - Left aligned */}
 
-                        <span className="ml-1 capitalize">{order.status}</span>
+                      <div className={`md:hidden inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(order.status)} mt-2`}>
 
-                      </div>
+                        {getStatusIcon(order.status)}
 
-                    </div>
+                        <span className="ml-1 capitalize">{order.status}</span>
 
+                      </div>
 
+                    </div>
 
-                    <div className="mb-4">
 
-                      <h5 className="font-medium text-gray-800 dark:text-white mb-2">Items from {user?.full_name}:</h5>
 
-                      <div className="space-y-2">
+                    <div className="mb-4">
 
-                        {order.order_items.map((item) => (
+                      <h5 className="font-medium text-gray-800 dark:text-white mb-2">Items from {user?.full_name}:</h5>
 
-                          <div key={item.id} className="flex justify-between items-center glass-morphism p-2 rounded border border-white/10">
+                      <div className="space-y-2">
 
-                            <span className="text-gray-600 dark:text-gray-300">
+                        {order.order_items.map((item) => (
 
-                              {item.menu_item.name} x {item.quantity}
+                          <div key={item.id} className="flex justify-between items-center glass-morphism p-2 rounded border border-white/10">
 
-                            </span>
+                            <span className="text-gray-600 dark:text-gray-300">
 
-                            <span className="font-medium text-gray-800 dark:text-white">₹{item.price * item.quantity}</span>
+                              {item.menu_item.name} x {item.quantity}
 
-                          </div>
+                            </span>
 
-                        ))}
+                            <span className="font-medium text-gray-800 dark:text-white">₹{item.price * item.quantity}</span>
 
-                      </div>
+                          </div>
 
-                    </div>
+                        ))}
 
+                      </div>
 
+                    </div>
 
-                    <div className="flex flex-wrap gap-2">
 
-                      <button
 
-                        onClick={() => updateOrderStatus(order.id, 'processing')}
+                    <div className="flex flex-wrap gap-2">
 
-                        disabled={order.status !== 'pending' || isOrderUpdating(order.id, 'processing')}
+                      <button
 
-                        className="px-4 py-2 modern-button text-black dark:text-white rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 text-sm"
+                        onClick={() => updateOrderStatus(order.id, 'processing')}
 
-                      >
+                        disabled={order.status !== 'pending' || isOrderUpdating(order.id, 'processing')}
 
-                        {isOrderUpdating(order.id, 'processing') ? 'Updating...' : 'Start Processing'}
+                        className="px-4 py-2 modern-button text-black dark:text-white rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 text-sm"
 
-                      </button>
+                      >
 
-                      <button
+                        {isOrderUpdating(order.id, 'processing') ? 'Updating...' : 'Start Processing'}
 
-                        onClick={() => updateOrderStatus(order.id, 'ready')}
+                      </button>
 
-                        disabled={order.status !== 'processing' || isOrderUpdating(order.id, 'ready')}
+                      <button
 
-                        className="px-4 py-2 text-black dark:text-white rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 text-sm"
+                        onClick={() => updateOrderStatus(order.id, 'ready')}
 
-                        style={{ 
+                        disabled={order.status !== 'processing' || isOrderUpdating(order.id, 'ready')}
 
-                          background: 'linear-gradient(135deg, rgba(34, 197, 94, 0.9) 0%, rgba(16, 185, 129, 0.9) 100%)',
+                        className="px-4 py-2 text-black dark:text-white rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 text-sm"
 
-                          boxShadow: '0 0 20px rgba(34, 197, 94, 0.4)' 
+                        style={{ 
 
-                        }}
+                          background: 'linear-gradient(135deg, rgba(34, 197, 94, 0.9) 0%, rgba(16, 185, 129, 0.9) 100%)',
 
-                      >
+                          boxShadow: '0 0 20px rgba(34, 197, 94, 0.4)' 
 
-                        {isOrderUpdating(order.id, 'ready') ? 'Updating...' : 'Mark Ready'}
+                        }}
 
-                      </button>
+                      >
 
-                      <button
+                        {isOrderUpdating(order.id, 'ready') ? 'Updating...' : 'Mark Ready'}
 
-                        onClick={() => updateOrderStatus(order.id, 'completed')}
+                      </button>
 
-                        disabled={order.status !== 'ready' || isOrderUpdating(order.id, 'completed')}
+                      <button
 
-                        className="px-4 py-2 glass-morphism hover:bg-white/10 text-black dark:text-white rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 text-sm border border-white/20"
+                        onClick={() => updateOrderStatus(order.id, 'completed')}
 
-                      >
+                        disabled={order.status !== 'ready' || isOrderUpdating(order.id, 'completed')}
 
-                        {isOrderUpdating(order.id, 'completed') ? 'Updating...' : 'Complete'}
+                        className="px-4 py-2 glass-morphism hover:bg-white/10 text-black dark:text-white rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 text-sm border border-white/20"
 
-                      </button>
+                      >
 
-                    </div>
+                        {isOrderUpdating(order.id, 'completed') ? 'Updating...' : 'Complete'}
 
-                  </div>
+                      </button>
 
-                ))}
+                    </div>
 
-              </div>
+                  </div>
 
-            )}
+                ))}
 
-          </div>
+              </div>
 
-        )}
+            )}
 
+          </div>
 
+        )}
 
-        {/* Menu Tab */}
 
-        {activeTab === 'menu' && (
 
-          <div className="space-y-6">
+        {/* Menu Tab */}
 
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        {activeTab === 'menu' && (
 
-              <h2 className="text-2xl font-bold text-gray-800 dark:text-white">Menu Items for {user?.full_name}</h2>
+          <div className="space-y-6">
 
-              <button
+            <div className="flex flex-col sm:flex-row justify-start items-start sm:items-center gap-4">
 
-                onClick={() => {
+              <h2 className="text-2xl font-bold text-gray-800 dark:text-white">Menu Items for {user?.full_name}</h2>
 
-                  setEditingItem(null);
+              <button
 
-                  setIsEditModalOpen(true);
+                onClick={() => {
 
-                }}
+                  setEditingItem(null);
 
-                className="flex items-center space-x-2 text-white px-4 py-2 rounded-lg transition-all duration-200"
+                  setIsEditModalOpen(true);
 
-                style={{ 
+                }}
 
-                  background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.9) 0%, rgba(5, 150, 105, 0.9) 100%)',
+                className="flex items-center space-x-2 text-white px-4 py-2 rounded-lg transition-all duration-200"
 
-                  boxShadow: '0 0 20px rgba(16, 185, 129, 0.4)' 
+                style={{ 
 
-                }}
+                  background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.9) 0%, rgba(5, 150, 105, 0.9) 100%)',
 
-              >
+                  boxShadow: '0 0 20px rgba(16, 185, 129, 0.4)' 
 
-                <Plus className="w-5 h-5" />
+                }}
 
-                <span>Add New Item</span>
+              >
 
-              </button>
+                <Plus className="w-5 h-5" />
 
-            </div>
+                <span>Add New Item</span>
 
+              </button>
 
+            </div>
 
-            <div className="responsive-grid">
 
-              {menuItems.map((item) => (
 
-                <div key={item.id} className="glass-card rounded-xl overflow-hidden">
+            {/* Menu Items Grid - 3 cards per row */}
 
-                  <img
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
 
-                    src={item.image_url}
+              {menuItems.map((item) => (
 
-                    alt={item.name}
+                <div key={item.id} className="glass-card rounded-xl overflow-hidden">
 
-                    className="w-full h-48 object-cover"
+                  <img
 
-                  />
+                    src={item.image_url}
 
-                  <div className="p-6">
+                    alt={item.name}
 
-                    <div className="flex justify-between items-start mb-2">
+                    className="w-full h-48 object-cover"
 
-                      <h3 className="text-xl font-semibold text-gray-800 dark:text-white">{item.name}</h3>
+                  />
 
-                      <span className="text-xl font-bold cosmic-text">₹{item.price}</span>
+                  <div className="p-6">
 
-                    </div>
+                    <div className="flex justify-between items-start mb-2">
 
-                    <p className="text-gray-600 dark:text-gray-400 mb-4">{item.description}</p>
+                      <h3 className="text-xl font-semibold text-gray-800 dark:text-white">{item.name}</h3>
 
-                    <div className="flex items-center justify-between text-sm text-gray-600 dark:text-gray-500 mb-2">
+                      <span className="text-xl font-bold cosmic-text">₹{item.price}</span>
 
-                      <span className={`font-medium ${
+                    </div>
 
-                        item.quantity_available <= 0 
+                    <p className="text-gray-600 dark:text-gray-400 mb-4">{item.description}</p>
 
-                          ? 'text-red-600 dark:text-red-400' 
+                    <div className="flex items-center justify-between text-sm text-gray-600 dark:text-gray-500 mb-2">
 
-                          : item.quantity_available <= 5 
+                      <span className={`font-medium ${
 
-                          ? 'text-yellow-600 dark:text-yellow-400' 
+                        item.quantity_available <= 0 
 
-                          : 'text-green-600 dark:text-green-400'
+                          ? 'text-red-600 dark:text-red-400' 
 
-                      }`}>
+                          : item.quantity_available <= 5 
 
-                        Available: {item.quantity_available}
+                          ? 'text-yellow-600 dark:text-yellow-400' 
 
-                        {item.quantity_available <= 0 && ' (Out of Stock)'}
+                          : 'text-green-600 dark:text-green-400'
 
-                        {item.quantity_available > 0 && item.quantity_available <= 5 && ' (Low Stock)'}
+                      }`}>
 
-                      </span>
+                        Available: {item.quantity_available}
 
-                      <span>Serves: {item.serves}</span>
+                        {item.quantity_available <= 0 && ' (Out of Stock)'}
 
-                    </div>
+                        {item.quantity_available > 0 && item.quantity_available <= 5 && ' (Low Stock)'}
 
-                    <div className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+                      </span>
 
-                      <span className="font-medium">Canteen:</span> {item.canteen_name}
+                      <span>Serves: {item.serves}</span>
 
-                    </div>
+                    </div>
 
-                    <div className="flex space-x-2">
+                    <div className="text-sm text-gray-600 dark:text-gray-400 mb-4">
 
-                      <button
+                      <span className="font-medium">Canteen:</span> {item.canteen_name}
 
-                        onClick={() => {
+                    </div>
 
-                          setEditingItem(item);
+                    <div className="flex space-x-2">
 
-                          setIsEditModalOpen(true);
+                      <button
 
-                        }}
+                        onClick={() => {
 
-                        className="flex-1 flex items-center justify-center space-x-2 modern-button text-white px-4 py-2 rounded-lg transition-all duration-200"
+                          setEditingItem(item);
 
-                      >
+                          setIsEditModalOpen(true);
 
-                        <Edit className="w-4 h-4" />
+                        }}
 
-                        <span>Edit</span>
+                        className="flex-1 flex items-center justify-center space-x-2 modern-button text-white px-4 py-2 rounded-lg transition-all duration-200"
 
-                      </button>
+                      >
 
-                      <button
+                        <Edit className="w-4 h-4" />
 
-                        onClick={() => handleDeleteMenuItem(item.id)}
+                        <span>Edit</span>
 
-                        disabled={deletingMenuItem === item.id}
+                      </button>
 
-                        className="flex-1 flex items-center justify-center space-x-2 text-white px-4 py-2 rounded-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                      <button
 
-                        style={{ 
+                        onClick={() => handleDeleteMenuItem(item.id)}
 
-                          background: 'linear-gradient(135deg, rgba(239, 68, 68, 0.9) 0%, rgba(220, 38, 38, 0.9) 100%)',
+                        disabled={deletingMenuItem === item.id}
 
-                          boxShadow: '0 0 20px rgba(239, 68, 68, 0.4)' 
+                        className="flex-1 flex items-center justify-center space-x-2 text-white px-4 py-2 rounded-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
 
-                        }}
+                        style={{ 
 
-                      >
+                          background: 'linear-gradient(135deg, rgba(239, 68, 68, 0.9) 0%, rgba(220, 38, 38, 0.9) 100%)',
 
-                        <Trash2 className="w-4 h-4" />
+                          boxShadow: '0 0 20px rgba(239, 68, 68, 0.4)' 
 
-                        <span>{deletingMenuItem === item.id ? 'Deleting...' : 'Delete'}</span>
+                        }}
 
-                      </button>
+                      >
 
-                    </div>
+                        <Trash2 className="w-4 h-4" />
 
-                  </div>
+                        <span>{deletingMenuItem === item.id ? 'Deleting...' : 'Delete'}</span>
 
-                </div>
+                      </button>
 
-              ))}
+                    </div>
 
-            </div>
+                  </div>
 
+                </div>
 
+              ))}
 
-            {menuItems.length === 0 && (
+            </div>
 
-              <div className="text-center py-12">
 
-                <div className="w-16 h-16 glass-morphism rounded-full flex items-center justify-center mx-auto mb-4 border border-white/20">
 
-                  <Plus className="w-8 h-8 text-gray-500 dark:text-gray-400" />
+            {menuItems.length === 0 && (
 
-                </div>
+              <div className="text-center py-12">
 
-                <h3 className="text-lg font-medium text-gray-800 dark:text-white mb-2">No menu items yet</h3>
+                <div className="w-16 h-16 glass-morphism rounded-full flex items-center justify-center mx-auto mb-4 border border-white/20">
 
-                <p className="text-gray-600 dark:text-gray-400">Add your first menu item for {user?.full_name} to get started</p>
+                  <Plus className="w-8 h-8 text-gray-500 dark:text-gray-400" />
 
-              </div>
+                </div>
 
-            )}
+                <h3 className="text-lg font-medium text-gray-800 dark:text-white mb-2">No menu items yet</h3>
 
-          </div>
+                <p className="text-gray-600 dark:text-gray-400">Add your first menu item for {user?.full_name} to get started</p>
 
-        )}
+              </div>
 
-      </div>
+            )}
 
+          </div>
 
+        )}
 
-      <Footer />
+        </div>
 
+      </div>
 
 
-      {/* Edit/Add Menu Item Modal */}
 
-      {isEditModalOpen && (
+      <Footer />
 
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
 
-          <div className="glass-morphism-strong rounded-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto custom-scrollbar">
 
-            {/* Modal Header */}
+      {/* Edit/Add Menu Item Modal */}
 
-            <div className="flex items-center justify-between p-6 border-b border-white/20">
+      {isEditModalOpen && (
 
-              <h3 className="text-xl font-semibold text-gray-800 dark:text-white">
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
 
-                {editingItem ? 'Edit Menu Item' : 'Add New Menu Item'}
+          <div className="glass-morphism-strong rounded-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto custom-scrollbar">
 
-              </h3>
+            {/* Modal Header */}
 
-              <button
+            <div className="flex items-center justify-between p-6 border-b border-white/20">
 
-                onClick={() => setIsEditModalOpen(false)}
+              <h3 className="text-xl font-semibold text-gray-800 dark:text-white">
 
-                disabled={savingMenuItem}
+                {editingItem ? 'Edit Menu Item' : 'Add New Menu Item'}
 
-                className="p-2 hover:bg-white/10 rounded-lg transition-colors disabled:opacity-50"
+              </h3>
 
-              >
+              <button
 
-                <X className="w-5 h-5 text-gray-600 dark:text-gray-400" />
+                onClick={() => setIsEditModalOpen(false)}
 
-              </button>
+                disabled={savingMenuItem}
 
-            </div>
+                className="p-2 hover:bg-white/10 rounded-lg transition-colors disabled:opacity-50"
 
+              >
 
+                <X className="w-5 h-5 text-gray-600 dark:text-gray-400" />
 
-            {/* Modal Body */}
+              </button>
 
-            <div className="p-6 space-y-6">
+            </div>
 
-              {/* Name */}
 
-              <div>
 
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            {/* Modal Body */}
 
-                  Item Name *
+            <div className="p-6 space-y-6">
 
-                </label>
+              {/* Name */}
 
-                <input
+              <div>
 
-                  type="text"
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
 
-                  value={editForm.name}
+                  Item Name *
 
-                  onChange={(e) => setEditForm(prev => ({ ...prev, name: e.target.value }))}
+                </label>
 
-                  className="w-full px-3 py-2 glass-input rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-transparent"
+                <input
 
-                  placeholder="Enter item name"
+                  type="text"
 
-                  disabled={savingMenuItem}
+                  value={editForm.name}
 
-                />
+                  onChange={(e) => setEditForm(prev => ({ ...prev, name: e.target.value }))}
 
-              </div>
+                  className="w-full px-3 py-2 glass-input rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-transparent"
 
+                  placeholder="Enter item name"
 
+                  disabled={savingMenuItem}
 
-              {/* Description */}
+                />
 
-              <div>
+              </div>
 
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
 
-                  Description *
 
-                </label>
+              {/* Description */}
 
-                <textarea
+              <div>
 
-                  value={editForm.description}
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
 
-                  onChange={(e) => setEditForm(prev => ({ ...prev, description: e.target.value }))}
+                  Description *
 
-                  rows={3}
+                </label>
 
-                  className="w-full px-3 py-2 modern-input rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                <textarea
 
-                  placeholder="Enter item description"
+                  value={editForm.description}
 
-                  disabled={savingMenuItem}
+                  onChange={(e) => setEditForm(prev => ({ ...prev, description: e.target.value }))}
 
-                />
+                  rows={3}
 
-              </div>
+                  className="w-full px-3 py-2 modern-input rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
 
+                  placeholder="Enter item description"
 
+                  disabled={savingMenuItem}
 
-              {/* Price, Serves, Quantity Available */}
+                />
 
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              </div>
 
-                <div>
 
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
 
-                    <DollarSign className="w-4 h-4 inline mr-1" />
+              {/* Price, Serves, Quantity Available */}
 
-                    Price (₹) *
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
 
-                  </label>
+                <div>
 
-                  <input
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
 
-                    type="number"
+                    <DollarSign className="w-4 h-4 inline mr-1" />
 
-                    step="0.01"
+                    Price (₹) *
 
-                    min="0"
+                  </label>
 
-                    value={editForm.price}
+                  <input
 
-                    onChange={(e) => setEditForm(prev => ({ ...prev, price: e.target.value }))}
+                    type="number"
 
-                    className="w-full px-3 py-2 modern-input rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                    step="0.01"
 
-                    placeholder="0.00"
+                    min="0"
 
-                    disabled={savingMenuItem}
+                    value={editForm.price}
 
-                  />
+                    onChange={(e) => setEditForm(prev => ({ ...prev, price: e.target.value }))}
 
-                </div>
+                    className="w-full px-3 py-2 modern-input rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
 
+                    placeholder="0.00"
 
+                    disabled={savingMenuItem}
 
-                <div>
+                  />
 
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                </div>
 
-                    <Users className="w-4 h-4 inline mr-1" />
 
-                    Serves *
 
-                  </label>
+                <div>
 
-                  <input
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
 
-                    type="number"
+                    <Users className="w-4 h-4 inline mr-1" />
 
-                    min="1"
+                    Serves *
 
-                    value={editForm.serves}
+                  </label>
 
-                    onChange={(e) => setEditForm(prev => ({ ...prev, serves: e.target.value }))}
+                  <input
 
-                    className="w-full px-3 py-2 modern-input rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                    type="number"
 
-                    placeholder="1"
+                    min="1"
 
-                    disabled={savingMenuItem}
+                    value={editForm.serves}
 
-                  />
+                    onChange={(e) => setEditForm(prev => ({ ...prev, serves: e.target.value }))}
 
-                </div>
+                    className="w-full px-3 py-2 modern-input rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
 
+                    placeholder="1"
 
+                    disabled={savingMenuItem}
 
-                <div>
+                  />
 
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                </div>
 
-                    <Package2 className="w-4 h-4 inline mr-1" />
 
-                    Available Qty *
 
-                  </label>
+                <div>
 
-                  <input
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
 
-                    type="number"
+                    <Package2 className="w-4 h-4 inline mr-1" />
 
-                    min="0"
+                    Available Qty *
 
-                    value={editForm.quantity_available}
+                  </label>
 
-                    onChange={(e) => setEditForm(prev => ({ ...prev, quantity_available: e.target.value }))}
+                  <input
 
-                    className="w-full px-3 py-2 modern-input rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                    type="number"
 
-                    placeholder="0"
+                    min="0"
 
-                    disabled={savingMenuItem}
+                    value={editForm.quantity_available}
 
-                  />
+                    onChange={(e) => setEditForm(prev => ({ ...prev, quantity_available: e.target.value }))}
 
-                </div>
+                    className="w-full px-3 py-2 modern-input rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
 
-              </div>
+                    placeholder="0"
 
+                    disabled={savingMenuItem}
 
+                  />
 
-              {/* Category and Canteen */}
+                </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              </div>
 
-                <div>
 
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
 
-                    Category
+              {/* Category and Canteen */}
 
-                  </label>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 
-                  <select
+                <div>
 
-                    value={editForm.category}
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
 
-                    onChange={(e) => setEditForm(prev => ({ ...prev, category: e.target.value }))}
+                    Category
 
-                    className="w-full px-3 py-2 modern-input rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                  </label>
 
-                    disabled={savingMenuItem}
+                  <select
 
-                  >
+                    value={editForm.category}
 
-                    <option value="main_course" className="bg-black text-white">Main Course</option>
+                    onChange={(e) => setEditForm(prev => ({ ...prev, category: e.target.value }))}
 
-                    <option value="snacks" className="bg-black text-white">Snacks</option>
+                    className="w-full px-3 py-2 modern-input rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
 
-                    <option value="beverages" className="bg-black text-white">Beverages</option>
+                    disabled={savingMenuItem}
 
-                    <option value="south_indian" className="bg-black text-white">South Indian</option>
+                  >
 
-                    <option value="desserts" className="bg-black text-white">Desserts</option>
+                    <option value="main_course" className="bg-black text-white">Main Course</option>
 
-                  </select>
+                    <option value="snacks" className="bg-black text-white">Snacks</option>
 
-                </div>
+                    <option value="beverages" className="bg-black text-white">Beverages</option>
 
+                    <option value="south_indian" className="bg-black text-white">South Indian</option>
 
+                    <option value="desserts" className="bg-black text-white">Desserts</option>
 
-                <div>
+                  </select>
 
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                </div>
 
-                    Canteen Name
 
-                  </label>
 
-                  <input
+                <div>
 
-                    type="text"
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
 
-                    value={user?.full_name || ''}
+                    Canteen Name
 
-                    className="w-full px-3 py-2 glass-input rounded-lg bg-white/5 text-gray-400"
+                  </label>
 
-                    disabled
+                  <input
 
-                    readOnly
+                    type="text"
 
-                  />
+                    value={user?.full_name || ''}
 
-                  <p className="text-xs text-gray-600 dark:text-gray-500 mt-1">
+                    className="w-full px-3 py-2 glass-input rounded-lg bg-white/5 text-gray-400"
 
-                    Items will be added to your canteen automatically
+                    disabled
 
-                  </p>
+                    readOnly
 
-                </div>
+                  />
 
-              </div>
+                  <p className="text-xs text-gray-600 dark:text-gray-500 mt-1">
 
+                    Items will be added to your canteen automatically
 
+                  </p>
 
-              {/* Image URL */}
+                </div>
 
-              <div>
+              </div>
 
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
 
-                  Image URL (Optional)
 
-                </label>
+              {/* Image URL */}
 
-                <input
+              <div>
 
-                  type="text"
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
 
-                  value={editForm.image_url}
+                  Image URL (Optional)
 
-                  onChange={(e) => setEditForm(prev => ({ ...prev, image_url: e.target.value }))}
+                </label>
 
-                  className="w-full px-3 py-2 modern-input rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                <input
 
-                  placeholder="https://example.com/image.jpg"
+                  type="text"
 
-                  disabled={savingMenuItem}
+                  value={editForm.image_url}
 
-                />
+                  onChange={(e) => setEditForm(prev => ({ ...prev, image_url: e.target.value }))}
 
-                <p className="text-xs text-gray-600 dark:text-gray-500 mt-1">
+                  className="w-full px-3 py-2 modern-input rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
 
-                  Leave empty to use default image
+                  placeholder="https://example.com/image.jpg"
 
-                </p>
+                  disabled={savingMenuItem}
 
-              </div>
+                />
 
-            </div>
+                <p className="text-xs text-gray-600 dark:text-gray-500 mt-1">
 
+                  Leave empty to use default image
 
+                </p>
 
-            {/* Modal Footer */}
+              </div>
 
-            <div className="flex space-x-4 p-6 border-t border-white/20">
+            </div>
 
-              <button
 
-                onClick={() => setIsEditModalOpen(false)}
 
-                disabled={savingMenuItem}
+            {/* Modal Footer */}
 
-                className="flex-1 px-4 py-2 glass-morphism border border-white/20 rounded-lg hover:bg-white/10 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-gray-800 dark:text-white"
+            <div className="flex space-x-4 p-6 border-t border-white/20">
 
-              >
+              <button
 
-                Cancel
+                onClick={() => setIsEditModalOpen(false)}
 
-              </button>
+                disabled={savingMenuItem}
 
-              <button
+                className="flex-1 px-4 py-2 glass-morphism border border-white/20 rounded-lg hover:bg-white/10 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-gray-800 dark:text-white"
 
-                onClick={handleSaveMenuItem}
+              >
 
-                disabled={savingMenuItem}
+                Cancel
 
-                className="flex-1 px-4 py-2 text-white rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2"
+              </button>
 
-                style={{ 
+              <button
 
-                  background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.9) 0%, rgba(5, 150, 105, 0.9) 100%)',
+                onClick={handleSaveMenuItem}
 
-                  boxShadow: '0 0 20px rgba(16, 185, 129, 0.4)' 
+                disabled={savingMenuItem}
 
-                }}
+                className="flex-1 px-4 py-2 text-white rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2"
 
-              >
+                style={{ 
 
-                <CheckCircle className="w-4 h-4" />
+                  background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.9) 0%, rgba(5, 150, 105, 0.9) 100%)',
 
-                <span>{savingMenuItem ? 'Saving...' : editingItem ? 'Update Item' : 'Create Item'}</span>
+                  boxShadow: '0 0 20px rgba(16, 185, 129, 0.4)' 
 
-              </button>
+                }}
 
-            </div>
+              >
 
-          </div>
+                <CheckCircle className="w-4 h-4" />
 
-        </div>
+                <span>{savingMenuItem ? 'Saving...' : editingItem ? 'Update Item' : 'Create Item'}</span>
 
-      )}
+              </button>
 
-    </div>
+            </div>
 
-  );
+          </div>
+
+        </div>
+
+      )}
+
+    </div>
+
+  );
   
 };
 export default StaffDashboard;
-
