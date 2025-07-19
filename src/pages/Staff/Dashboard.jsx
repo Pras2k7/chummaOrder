@@ -1131,6 +1131,9 @@ const StaffDashboard = () => {
             <div className="flex flex-col sm:flex-row justify-start items-start sm:items-center gap-4">
 
               <h2 className="text-2xl font-bold text-gray-800 dark:text-white">Menu Items for {user?.full_name}</h2>
+            </div>
+            
+            <div className="flex justify-end mb-6">
 
               <button
 
